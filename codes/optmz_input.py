@@ -15,6 +15,7 @@ Created on Mon Sep 21 17:02:28 2020
 """
 
 from math import pi
+import numpy as np
 
 class phys_parameter:
     
@@ -23,28 +24,28 @@ class phys_parameter:
         
         self.Q = arg1      # laser power [W]    
         self.rb = arg2     # radius of heat source [m] 
-        self.t_spot_on = arg3 
+        self.t_spot_on = arg3 # the span of the gaussian time [s]
         
     
         # Properties of Al-Cu
-        k = 0.14
+        self.k = 0.14
         Tm = 933.3
         c_infty = 3
         liq_slope = 2.6
-        c_infm = c_infty*liq_slope
+        self.c_infm = c_infty*liq_slope
         
         self.GT = 0.24                       # GT coefficient Kum
         self.Dl = 3000                       # liquid diffusion coefficient      um**2/s
         self.d0 = 5.0e-3                       # capillary length -- associated with GT coefficient   um
         
         self.Teu = 821
-        self.Ts = Tm - c_infm/k
-        self.Tl = Tm - c_infm
+        self.Ts = Tm - self.c_infm/self.k
+        self.Tl = Tm - self.c_infm
         self.deltaT = self.Tl-self.Ts
         
         self.T0 = 25+273       # ambient temperature   
         self.DT_N = 0.75
-        self.line_den = 0.1
+        self.line_den = 0.1   ## /um
         
         K = 210                 # thermal conductivity [W/(m*K)]
         rho = 2768              # density  [kg/m^3]
@@ -91,7 +92,7 @@ class phys_parameter:
         
         self.param1 = self.n1
         self.param2 = self.t_spot_on / self.time_scale
-        self.param3 = self.t_taper / self.time_scale
+  
         
 
 
@@ -100,21 +101,18 @@ class simu_parameter:
     
     def __init__(self,p):
     
-        lxd = 2e-3      # dimensional length [m]
-        asp_ratio = 1/2
+        lxd = 480e-6     # dimensional length [m]
+        asp_ratio = 1/2  # height is the half of the size
         
         
-        lxd_dns =  80e-6 # 13e-4
-        lyd_dns =  80e-6 # 12e-4
+        lxd_dns =  0.125*lxd # 13e-4
+        lyd_dns =  lxd_dns # 12e-4
         
         
         self.lx = lxd / p.len_scale    # non-dimensional length
-        
-        
-        self.nx = 256*4+1
+
+        self.nx = 64*4+1
         self.ny = int((self.nx-1)*asp_ratio+1)
-        
-        
         self.h = self.lx / (self.nx-1)
         self.ly = (self.ny-1)*self.h 
         
@@ -122,37 +120,35 @@ class simu_parameter:
         
         self.lx_dns = lxd_dns / p.len_scale
         self.ly_dns = lyd_dns / p.len_scale        
-        self.nx_dns = 256*2+1
-        
-        
-        self.h_dns = self.lx_dns / (self.nx_dns - 1)
-        self.ny_dns = int( self.ly_dns / self.h_dns) + 1
+        self.nx_dns = int( self.lx_dns / self.h) + 1
+        self.ny_dns = int( self.ly_dns / self.h) + 1
         
         # actual dns ly
-        self.ly_dns = (self.ny_dns-1) * self.h_dns
+        #self.ly_dns = (self.ny_dns-1) * self.h
         
 
-        self.cg_tol = 1e-8
+        #self.cg_tol = 1e-8
+        self.cg_tol = 1e-6
+        
         self.maxit = 80
         self.source_x = [0,0] # -self.lx/4
-        
-        
-        # self.t_spot_on = 17 # 0.5e-3 / p.t_scale
-        # self.t_tapper  = 17 # 0.5e-3 / p.t_scale
-        
-        
-        self.Mt_spot_on = 100
-        
-        self.dt = (p.t_spot_on/p.time_scale) / self.Mt_spot_on
-        
-        self.dt_off = self.dt
-        
         self.near_top = self.h * 1.1
         
         
-        self.sol_max = int( ( (p.t_spot_on + p.t_taper)/p.time_scale)  / self.dt_off) + 1 
         
+        self.num_laser = 1
+        self.num_pulse = 4
         
+        self.t_end = self.num_pulse * p.t_spot_on   ## has dimension s
+
+        
+        self.Mt_spot_on = 25
+        
+        self.dt = (p.t_spot_on/p.time_scale) / self.Mt_spot_on
+        self.sol_max = int( ( (self.t_end)/p.time_scale)  / self.dt) + 1 
+        
+        self.start_pulse = np.linspace(0, self.t_end/p.time_scale, self.num_pulse,endpoint=False)
+
         
     
 
