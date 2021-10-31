@@ -618,7 +618,7 @@ J_func = lambda m_targ: disctns_objective_function(m_targ, pl, solver, struct_cl
 
 
 
-options = {'tolfun':1e-1}
+options = {'tolfun':1e-1,'maxiter': 1}
 
 res = cma.fmin(J_func, m0, 0.02, options)
 
