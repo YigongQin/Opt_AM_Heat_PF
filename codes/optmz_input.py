@@ -111,7 +111,7 @@ class simu_parameter:
         
         self.lx = lxd / p.len_scale    # non-dimensional length
 
-        self.nx = 64*4+1
+        self.nx = 256*4+1
         self.ny = int((self.nx-1)*asp_ratio+1)
         self.h = self.lx / (self.nx-1)
         self.ly = (self.ny-1)*self.h 

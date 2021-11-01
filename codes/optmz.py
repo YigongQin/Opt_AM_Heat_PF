@@ -62,6 +62,7 @@ def Hunt_model(G, R, phys):
     if G > G_thre_u: return 1
     elif G > G_thre_d: return 2
     elif G > 0: return 3
+    elif G == 0.0: return 4
     else: raise ValueError('whats wrong here')
 
 
@@ -396,10 +397,7 @@ class heat_solver():
         fig.colorbar(h2, ax = ax[1])         
         
     def plot_hunt_structure(self, pl, m_targ):
-        
-        
-        
-        
+          
         fig, ax = plt.subplots(1,2,figsize=(12.8,4.8))
         
         pl.plot_laser_profile_in_time( m_targ, ax[0])
@@ -421,6 +419,41 @@ class heat_solver():
            # cbar.ax.get_yaxis().labelpad = 15
         ax[1].text( -50, -50,'B:base, C:columnar, T:transition, E:equiaxed',fontsize=8)
         ax[1].set_title('Grain structure based on Hunt model')
+        plt.savefig('columnar.pdf',dpi=600)
+    
+    def plot_evolution(self, pl, m_targ, t):
+          
+        fig, ax = plt.subplots(1,2,figsize=(12.8,4.8))
+        plt.suptitle('t= %1.2f ms'%(t*self.simu.dt*self.phys.time_scale*1e3))
+        
+        xd = len_um(self.xx_dns)
+        yd = len_um(self.yy_dns)
+        ud = temp_dim(self.sol_temp)
+
+
+        h1 = ax[0].pcolormesh( xd,yd, ud, cmap = 'hot')
+        ax[0].contour(xd,yd,ud, [self.phys.Tl])
+        ax[0].set_xlabel('x [um]')
+        ax[0].set_ylabel('y [um]')
+        ax[0].set_title('temperature [K]')
+        fig.colorbar(h1, ax=ax[0])
+        
+        #discrete color scheme
+        cMap = ListedColormap(['purple', 'blue', 'green', 'yellow', 'red'])
+
+        heatmap = ax[1].pcolormesh( xd,yd, self.Hunt_struct, vmin = 0, vmax = 4, cmap = cMap)
+        ax[1].set_xlabel('x [um]')
+        ax[1].set_ylabel('y [um]')
+        
+        cbar = plt.colorbar(heatmap)
+        cbar.ax.get_yaxis().set_ticks([])
+        for j, lab in enumerate(['$B$','$C$','$T$','$E$', '$L$']):
+            cbar.ax.text(1.7, (6.5 * j + 3) / 8.0, lab, ha='center', va='center',color='black')
+           # cbar.ax.get_yaxis().labelpad = 15
+        ax[1].text( -58, -50,'B:base, C:columnar, T:transition, E:equiaxed, L:liquid',fontsize=9)
+        ax[1].set_title('Grain structure based on Hunt model')
+        plt.savefig('./figs/'+sys.argv[1]+'_frame'+str(t)+'.png',dpi=600, bbox_inches='tight')    
+        plt.close()
     
     
     def forward_solve(self, pl, m_targ):   ## pl is the input to the heat solver that changes the output u
@@ -428,7 +461,7 @@ class heat_solver():
         #Lap, Q, I, A0, M = export_mat(self.CFL)
         
         # initial condition
-
+        video_flag = True
         
         Q = self.matrices[1]
         A0 = self.matrices[3]
@@ -495,7 +528,14 @@ class heat_solver():
             t += self.simu.dt
             iteration += 1
            # print(iteration)
-            
+            if video_flag == True:
+                G_s = self.DNS_window(G)
+                R_s = self.DNS_window(R)               
+                self.sol_temp = self.DNS_window(self.shape_back_2d(u))
+                self.sol_G = heat_dim(G_s)/ ( self.phys.len_scale*1e6 )
+                self.sol_R = len_um(R_s)/self.phys.time_scale 
+                self.Hunt_struct = self.Hunt_model_Structure()
+                self.plot_evolution(pl, m_targ, iteration)
          #   if iteration%10 == 0:
                 
          #       self.sol_temp = self.DNS_window(self.shape_back_2d(u))
@@ -526,6 +566,7 @@ class heat_solver():
         
         self.Hunt_struct = self.Hunt_model_Structure()
         #self.plot_hunt_structure(pl, m_targ)
+        self.plot_evolution(pl, m_targ, iteration)
         
         return get_structure, self.Hunt_struct
         
@@ -579,21 +620,22 @@ P0 = np.linspace(maxP, minP, simu.num_pulse) ## initial guess for coefficient
 #P0[2] = 0.01
 
 t0 = np.ones(simu.num_pulse)*t_span
-'''
-P0 = np.array([maxP, maxP, minP, minP])*0.9
 
+#P0 = np.array([maxP, maxP, minP, minP])*0.9
+'''
 P0 = np.array([maxP, maxP, maxP, minP])*0.6
 
 P0 = np.array([maxP, minP, minP, minP])*1.8
 
-P0 = np.array([minP, maxP, minP, minP])*1.2
-
-P0 = np.array([minP, maxP, maxP, maxP])*0.6
-
-
-t0[3]*=0.3
+P0 = np.array([minP, maxP, minP, minP])*0.9
+t0[1]*=1.5
+t0[2]*=2
 '''
-m0= np.ones(simu.num_pulse*2)
+#P0 = np.array([maxP, maxP, minP, minP])*0.9
+#P0 = np.array([1, 1, 1, 1])*0.35
+#P0 = np.array([0.8,0.8,0.2,0.2])*0.8
+
+m0 = np.ones(simu.num_pulse*2)
 print('initial guess of parameters', m0)
 
 
@@ -605,13 +647,16 @@ pl = laser_parameter(simu.num_laser, simu.num_pulse, x_span/phys.len_scale, t0/p
 
 #struct_class =  structure( 0.3, 0.3, 'ring')
     
-#struct_class =  structure( 1, 0, 'columnar')
+struct_class =  structure( 1, 0, 'columnar')
 
-struct_class =  structure( 0, 1, 'equiaxed')
+#struct_class =  structure( 0, 1, 'equiaxed')
 
-out = disctns_objective_function(m0, pl, solver, struct_class)
+#out = disctns_objective_function(m0, pl, solver, struct_class)
 
-print('initial function value', out)
+#print('initial function value', out)
+m_true = sio.loadmat(sys.argv[1]+'.mat', squeeze_me=True)['sol']
+
+solver.forward_solve(pl, m_true)
 
 J_func = lambda m_targ: disctns_objective_function(m_targ, pl, solver, struct_class)
 
@@ -620,7 +665,7 @@ J_func = lambda m_targ: disctns_objective_function(m_targ, pl, solver, struct_cl
 
 options = {'tolfun':1e-1,'maxiter': 1}
 
-res = cma.fmin(J_func, m0, 0.02, options)
+#res = cma.fmin(J_func, m0, 0.02, options)
 
 #res = minimize(J_func, m_targ, method='Nelder-Mead', tol=1e-2)
 #es = cma.CMAEvolutionStrategy(m_targ, 0.05, options=options).optimize(J_func).result
