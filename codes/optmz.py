@@ -375,13 +375,15 @@ class heat_solver():
         ax.set_ylabel('y [um]')
         fig.colorbar(h1)
     
-    def plot_GR(self):
+    def plot_GR(self, t):
         
         xd = len_um(self.xx_dns)
         yd = len_um(self.yy_dns)
 
 
-        fig, ax = plt.subplots(1,2,figsize=(16,6))
+        fig, ax = plt.subplots(1,2,figsize=(12.8,4.8))
+        plt.suptitle('t= %1.2f ms'%(t*self.simu.dt*self.phys.time_scale*1e3))
+        
         h1 = ax[0].pcolormesh( xd,yd, self.sol_G, cmap = 'plasma')
       #  ax[0].contour(xd,yd,Gd, [0])
         ax[0].set_xlabel('x [um]')
@@ -395,6 +397,9 @@ class heat_solver():
         ax[1].set_ylabel('y [um]')
         ax[1].set_title('R [m/s]')
         fig.colorbar(h2, ax = ax[1])         
+        plt.savefig('./figs/'+sys.argv[1]+'_GR_frame'+str(t)+'.png',dpi=600, bbox_inches='tight')    
+        plt.close()
+
         
     def plot_hunt_structure(self, pl, m_targ):
           
@@ -535,7 +540,8 @@ class heat_solver():
                 self.sol_G = heat_dim(G_s)/ ( self.phys.len_scale*1e6 )
                 self.sol_R = len_um(R_s)/self.phys.time_scale 
                 self.Hunt_struct = self.Hunt_model_Structure()
-                self.plot_evolution(pl, m_targ, iteration)
+                #self.plot_evolution(pl, m_targ, iteration)
+                self.plot_GR(iteration)
          #   if iteration%10 == 0:
                 
          #       self.sol_temp = self.DNS_window(self.shape_back_2d(u))
