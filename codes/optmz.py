@@ -431,7 +431,7 @@ class heat_solver():
         ud = temp_dim(self.sol_temp)
 
 
-        h1 = ax[0].pcolormesh( xd,yd, ud, cmap = 'hot')
+        h1 = ax[0].pcolormesh( xd,yd, ud, vmin = 700, vmax = 1200, cmap = 'hot')
         ax[0].contour(xd,yd,ud, [self.phys.Tl])
         ax[0].set_xlabel('x [um]')
         ax[0].set_ylabel('y [um]')
